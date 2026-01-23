@@ -24,7 +24,7 @@ services:
 
 volumes:
   sqlite_data:
-  storage_date:
+  storage_data:
 
 networks:
   log_ad_network:
