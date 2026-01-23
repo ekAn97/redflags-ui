@@ -8,9 +8,25 @@ services:
     container_name: redflagui-app
     restart: always
     ports:
-      - "${PORT}:8083"
+      - "${PORT:-8083}:80"
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
       API_BASE_URL: "${API_BASE_URL}"
       APP_URL: ${APP_URL}
+      SESSION_DRIVER: file
+      CACHE_DRIVER: file
+    volumes:
+      -  sqlite_data:/var/www/html/database
+      -  storage_data:/var/www/html/storage
+    networks:
+      -  log_ad_network
+
+volumes:
+  sqlite_data:
+  storage_date:
+
+networks:
+  log_ad_network:
+    external: true
+    name: log_ad_network
