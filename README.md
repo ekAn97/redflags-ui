@@ -27,7 +27,7 @@ The **Red Flags** UI is a modern **Security Incident Dashboard** for log flows a
   - See top source hosts.  
 
 - **Responsive Design:** Designed to work for both desktop and mobile devices.  
-- **Dark Mode Friendly:**  
+- **Dark Mode Friendly**  
 
 ---
 
