@@ -2,7 +2,7 @@
 <img width="3788" height="1829" alt="Screenshot 2026-01-22 110745" src="https://github.com/user-attachments/assets/e4478985-91ad-4dd1-9a4a-9ddb31f95b64" />
 
 
-The **Red Flags** UI is a modern **Security Incident Dashboard** for log flows and anomaly detection results. Users can filter analyzed logs according to specific time ranges and assigned severity scores. The frontend is built using**TailwindCSS** and **Alpine.js**, and connects to a **FastAPI** backend.
+The **Red Flags** UI is a modern **Security Incident Dashboard** for log flows and anomaly detection results. Users can filter analyzed logs according to specific time ranges and assigned severity scores. The frontend is built using **TailwindCSS** and **Alpine.js**, and connects to a **FastAPI** backend.
 
 ---
 
