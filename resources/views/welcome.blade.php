@@ -109,7 +109,7 @@
 
                     <select x-model="severity"
                         class="px-3 py-2 bg-white text-black rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400">
-                        <option value="">All Severities</option>
+                        <option value="">All Alert Levels</option>
                         <option value="CRITICAL">CRITICAL</option>
                         <option value="HIGH">HIGH</option>
                         <option value="MEDIUM">MEDIUM</option>
@@ -175,7 +175,7 @@
                                     class="px-2 py-0.5 bg-cyan-500 text-white text-xs rounded-full">NEW</span>
                             </div>
                             <p class="text-white/50 text-sm mt-1 md:mt-0"
-                                x-text="`Source: ${log.source_host} | Severity: ${log.severity} | ${formatTime(log.event_timestamp)}`">
+                                x-text="`Source: ${log.source_host} | Alert Level: ${log.severity} | ${formatTime(log.event_timestamp)}`">
                             </p>
                         </div>
                         <i class="ph ph-caret-right text-cyan-400 text-lg"></i>
@@ -243,7 +243,7 @@
                                             x-text="selectedLog.source_host"></span>
                                     </div>
                                     <div class="flex justify-between items-center">
-                                        <span class="text-white/50">Severity:</span>
+                                        <span class="text-white/50">Alert Level:</span>
                                         <span class="px-3 py-1 text-sm rounded border"
                                             :class="getSeverityColor(selectedLog.severity)"
                                             x-text="selectedLog.severity"></span>
@@ -548,7 +548,7 @@
                 <div class="bg-white/5 p-6 rounded-xl border border-white/10 shadow-lg">
                     <h3 class="text-lg font-semibold mb-4 flex items-center">
                         <i class="ph ph-chart-bar text-cyan-400 mr-2"></i>
-                        Incidents by Severity
+                        Incidents by Alert Level
                         <span class="text-sm text-white/50 ml-2" x-text="`(Last ${timeRangeLabel})`"></span>
                     </h3>
                     <div class="h-64">
@@ -573,7 +573,7 @@
                     <h3 class="text-lg font-semibold mb-4 flex items-center justify-between">
                         <div class="flex items-center">
                             <i class="ph ph-list-bullets text-cyan-400 mr-2"></i>
-                            Severity Breakdown
+                            Alert Level Breakdown
                         </div>
                         <span class="text-sm text-white/50" x-text="`Last ${timeRangeLabel}`"></span>
                     </h3>
