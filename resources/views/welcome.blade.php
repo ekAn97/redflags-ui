@@ -706,13 +706,17 @@
 
                 async fetchLogs() {
                     try {
-                        let url = `${window.apiBaseUrl}/incidents?limit=${this.limit}&offset=0&x_api_key=-`;
+                        let url = `${window.apiBaseUrl}/incidents?limit=${this.limit}&offset=0`;
                         if (this.severity) url += `&severity=${this.severity}`;
                         if (this.log_type) url += `&log_type=${this.log_type}`;
                         if (this.hours) url += `&hours=${this.hours}`;
 
                         console.log('Fetching logs from:', url);
-                        const res = await fetch(url);
+                        const res = await fetch(url, {
+                            headers: {
+                                'ngrok-skip-browser-warning': 'true'
+                            }
+                        });
                         const data = await res.json();
                         const newLogs = data.incidents || [];
 
@@ -881,7 +885,11 @@
 
                 async fetchHostsStats() {
                     try {
-                        const res = await fetch(`${window.apiBaseUrl}/raw-logs/stats?x_api_key=-`);
+                        const res = await fetch(`${window.apiBaseUrl}/raw-logs/stats?`, {
+                            headers: {
+                                'ngrok-skip-browser-warning': 'true'
+                            }
+                        });
                         const data = await res.json();
                         this.availableHosts = data.hosts || [];
                     } catch (e) {
@@ -895,11 +903,15 @@
                     this.error = null;
 
                     try {
-                        let url = `${window.apiBaseUrl}/raw-logs/recent?n=${this.n}&x_api_key=-`;
+                        let url = `${window.apiBaseUrl}/raw-logs/recent?n=${this.n}`;
                         if (this.logType) url += `&log_type=${this.logType}`;
                         if (this.sourceHost) url += `&source_host=${this.sourceHost}`;
 
-                        const res = await fetch(url);
+                        const res = await fetch(url, {
+                            headers: {
+                                'ngrok-skip-browser-warning': 'true'
+                            }
+                        });
                         const data = await res.json();
 
                         this.rawLogs = (data.logs || []).map(item => ({
@@ -978,7 +990,11 @@
 
                 async fetchAllTimeStats() {
                     try {
-                        const res = await fetch(`${window.apiBaseUrl}/statistics?x_api_key=-&hours=${this.maxTimeRange}`);
+                        const res = await fetch(`${window.apiBaseUrl}/statistics?&hours=${this.maxTimeRange}`, {
+                            headers: {
+                                'ngrok-skip-browser-warning': 'true'
+                            }
+                        });
                         const data = await res.json();
                         this.allTimeStats = data || {};
                     } catch (e) {
@@ -988,7 +1004,11 @@
 
                 async fetchStats() {
                     try {
-                        const res = await fetch(`${window.apiBaseUrl}/statistics?x_api_key=-&hours=${this.timeRange}`);
+                        const res = await fetch(`${window.apiBaseUrl}/statistics?&hours=${this.timeRange}`, {
+                            headers: {
+                                'ngrok-skip-browser-warning': 'true'
+                            }
+                        });
                         const data = await res.json();
                         this.stats = data || {};
 

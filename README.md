@@ -2,7 +2,7 @@
 <img width="3788" height="1829" alt="Screenshot 2026-01-22 110745" src="https://github.com/user-attachments/assets/e4478985-91ad-4dd1-9a4a-9ddb31f95b64" />
 
 
-**Red Flags** είναι ένα μοντέρνο **Security Incident Dashboard** που εμφανίζει logs και στατιστικά από το API σας, με δυνατότητα φιλτραρίσματος, real-time ενημέρωσης και όμορφη απεικόνιση των δεδομένων. Το frontend είναι φτιαγμένο με **TailwindCSS** και **Alpine.js**, ενώ το backend API με **FastAPI**.
+The **Red Flags** UI is a modern **Security Incident Dashboard** for log flows and anomaly detection results. Users can filter analyzed logs according to specific time ranges and assigned severity scores. The frontend is built using **TailwindCSS** and **Alpine.js**, and connects to a **FastAPI** backend.
 
 ---
 
@@ -16,19 +16,18 @@
 ## Features
 
 - **Live Logs Tab:**  
-  - Αναζητήστε logs με βάση λέξεις-κλειδιά.  
-  - Φιλτράρετε μόνο **active** incidents.  
-  - Χρωματική κωδικοποίηση ανά **severity** ή **anomaly**.  
-  - Δυνατότητα επιλογής του αριθμού των logs που εμφανίζονται.  
+  - Search for logs by specifying severity levels, host-names and log types.  
+  - Obtain pre-analysis and analyzed logs.  
+  - Obtain detection analysis results by clicking to the desired analyzed log.  
+  - Determine how many logs to fetch.  
 
 - **Analytics Tab:**  
-  - Σύνολο incidents.  
-  - Incidents τελευταίων 24 ωρών.  
-  - Top source hosts.  
-  - Κατανομή incidents ανά severity και log type.  
+  - Gather information for last N hours.  
+  - Get graphical distribution of severity levels.  
+  - See top source hosts.  
 
-- **Responsive Design:** Λειτουργεί σε desktop και mobile.  
-- **Dark Mode Friendly:** Σκούρο theme για εύκολη ανάγνωση.  
+- **Responsive Design:** Designed to work for both desktop and mobile devices.  
+- **Dark Mode Friendly**  
 
 ---
 
@@ -36,7 +35,7 @@
 
 ### Backend (FastAPI)
 
-1. Clone το repo:
+1. Clone the repo:
 ```bash
-git clone https://github.com/georgekazz/redflags-ui.git
+git clone https://github.com/ekAn97/redflags-ui.git
 cd redflags-ui
