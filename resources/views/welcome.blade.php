@@ -91,6 +91,9 @@
             <button @click="tab='analytics'"
                 :class="tab==='analytics' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
                 class="px-4 pb-2 border-b-2 font-semibold transition">Analytics</button>
+            <button @click="tab='anomaly-analytics'"
+                :class="tab==='anomaly-analytics' ? 'border-cyan-400 text-cyan-400' : 'border-transparent'"
+                class="px-4 pb-2 border-b-2 font-semibold transition">Anomaly Analytics</button>
         </div>
 
         <!-- INCIDENT LOGS TAB -->
@@ -247,6 +250,33 @@
                                         <span class="px-3 py-1 text-sm rounded border"
                                             :class="getSeverityColor(selectedLog.severity)"
                                             x-text="selectedLog.severity"></span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Is Anomaly:</span>
+                                        <span class="px-3 py-1 text-sm rounded border"
+                                            :class="selectedLog.is_anomaly ? 'bg-red-500/20 text-red-300 border-red-400' : 'bg-green-500/20 text-green-300 border-green-400'">
+                                            <i :class="selectedLog.is_anomaly ? 'ph ph-warning-diamond' : 'ph ph-check-circle'"
+                                                class="mr-1"></i>
+                                            <span x-text="selectedLog.is_anomaly ? 'Yes' : 'No'"></span>
+                                        </span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Confidence:</span>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="px-3 py-1 text-sm rounded border"
+                                                :class="getConfidenceColor(selectedLog.analysis_result?.confidence)">
+                                                <span
+                                                    x-text="selectedLog.analysis_result?.confidence ? (selectedLog.analysis_result.confidence * 100).toFixed(1) + '%' : 'N/A'"></span>
+                                            </span>
+                                            <div class="w-24 bg-white/10 rounded-full h-2">
+                                                <div class="h-2 rounded-full transition-all duration-500"
+                                                    :class="getConfidenceBarColor(selectedLog.analysis_result?.confidence)"
+                                                    :style="`width: ${(selectedLog.analysis_result?.confidence || 0) * 100}%`">
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -645,6 +675,393 @@
                 </div>
             </div>
         </section>
+
+        <!-- ANOMALY ANALYTICS TAB -->
+        <section x-show="tab==='anomaly-analytics'" class="space-y-6" x-data="anomalyAnalyticsComponent()">
+            <div class="bg-white/5 p-4 rounded-xl border border-white/10">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center space-x-4">
+                        <label class="text-white font-semibold">Time Range:</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" x-model.number="timeRange" min="1" max="8760"
+                                class="px-3 py-2 bg-white/10 text-white rounded-lg w-24 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                placeholder="Hours" />
+                            <span class="text-white/70">hours</span>
+                        </div>
+                        <span class="text-cyan-400 font-medium" x-text="`(${timeRangeLabel})`"></span>
+                    </div>
+
+                    <!-- Quick Select Buttons -->
+                    <div class="flex items-center space-x-2">
+                        <span class="text-white/50 text-sm mr-2">Quick select:</span>
+                        <button @click="timeRange = 24" :class="timeRange === 24 ? 'bg-cyan-500' : 'bg-white/10'"
+                            class="px-3 py-1 rounded-lg text-sm transition hover:bg-cyan-600">
+                            24h
+                        </button>
+                        <button @click="timeRange = 168" :class="timeRange === 168 ? 'bg-cyan-500' : 'bg-white/10'"
+                            class="px-3 py-1 rounded-lg text-sm transition hover:bg-cyan-600">
+                            7d
+                        </button>
+                        <button @click="timeRange = 720" :class="timeRange === 720 ? 'bg-cyan-500' : 'bg-white/10'"
+                            class="px-3 py-1 rounded-lg text-sm transition hover:bg-cyan-600">
+                            30d
+                        </button>
+                        <button @click="timeRange = 8760" :class="timeRange === 8760 ? 'bg-cyan-500' : 'bg-white/10'"
+                            class="px-3 py-1 rounded-lg text-sm transition hover:bg-cyan-600">
+                            1y
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div
+                    class="bg-gradient-to-br from-red-500/20 to-red-600/10 p-6 rounded-xl border border-red-400/30 shadow-lg">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-white/70 uppercase tracking-wide">Total Anomalies</h3>
+                        <i class="ph ph-warning-octagon text-red-400 text-2xl"></i>
+                    </div>
+                    <p class="text-4xl font-bold text-red-400" x-text="anomalies.length"></p>
+                    <p class="text-xs text-white/50 mt-2" x-text="`Last ${timeRangeLabel}`"></p>
+                </div>
+
+                <div
+                    class="bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 p-6 rounded-xl border border-yellow-400/30 shadow-lg">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-white/70 uppercase tracking-wide">Avg Confidence</h3>
+                        <i class="ph ph-chart-line text-yellow-400 text-2xl"></i>
+                    </div>
+                    <p class="text-4xl font-bold text-yellow-400" x-text="averageConfidence + '%'"></p>
+                    <p class="text-xs text-white/50 mt-2">Average detection confidence</p>
+                </div>
+
+                <div
+                    class="bg-gradient-to-br from-purple-500/20 to-purple-600/10 p-6 rounded-xl border border-purple-400/30 shadow-lg">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-white/70 uppercase tracking-wide">High Confidence</h3>
+                        <i class="ph ph-seal-check text-purple-400 text-2xl"></i>
+                    </div>
+                    <p class="text-4xl font-bold text-purple-400" x-text="highConfidenceCount"></p>
+                    <p class="text-xs text-white/50 mt-2">Confidence ≥ 80%</p>
+                </div>
+
+                <div
+                    class="bg-gradient-to-br from-orange-500/20 to-orange-600/10 p-6 rounded-xl border border-orange-400/30 shadow-lg">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-white/70 uppercase tracking-wide">Critical Anomalies</h3>
+                        <i class="ph ph-fire text-orange-400 text-2xl"></i>
+                    </div>
+                    <p class="text-4xl font-bold text-orange-400" x-text="criticalAnomaliesCount"></p>
+                    <p class="text-xs text-white/50 mt-2">Critical severity level</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <span class="text-white font-semibold">Sort by:</span>
+                    <button @click="sortBy = 'confidence'; sortAnomalies()"
+                        :class="sortBy === 'confidence' ? 'bg-cyan-500' : 'bg-white/10'"
+                        class="px-4 py-2 rounded-lg text-sm transition hover:bg-cyan-600">
+                        <i class="ph ph-trend-up mr-2"></i>Confidence
+                    </button>
+                    <button @click="sortBy = 'time'; sortAnomalies()"
+                        :class="sortBy === 'time' ? 'bg-cyan-500' : 'bg-white/10'"
+                        class="px-4 py-2 rounded-lg text-sm transition hover:bg-cyan-600">
+                        <i class="ph ph-clock mr-2"></i>Time
+                    </button>
+                    <button @click="sortBy = 'severity'; sortAnomalies()"
+                        :class="sortBy === 'severity' ? 'bg-cyan-500' : 'bg-white/10'"
+                        class="px-4 py-2 rounded-lg text-sm transition hover:bg-cyan-600">
+                        <i class="ph ph-warning-circle mr-2"></i>Severity
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button @click="toggleSortOrder()"
+                        class="px-4 py-2 bg-white/10 rounded-lg text-sm transition hover:bg-white/20">
+                        <i :class="sortOrder === 'desc' ? 'ph ph-sort-descending' : 'ph ph-sort-ascending'"
+                            class="mr-2"></i>
+                        <span x-text="sortOrder === 'desc' ? 'Descending' : 'Ascending'"></span>
+                    </button>
+                    <span class="text-xs text-white/50">
+                        Last updated: <span x-text="lastUpdate"></span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="bg-white/5 backdrop-blur-lg rounded-xl shadow-xl p-6 border border-white/10">
+                <h3 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="ph ph-warning-diamond text-red-400 mr-2"></i>
+                    Detected Anomalies
+                    <span class="text-sm text-white/50 ml-3" x-text="`(${sortedAnomalies.length} total)`"></span>
+                </h3>
+
+                <div x-show="loading" class="text-center text-white/50 py-12">
+                    <i class="ph ph-spinner text-5xl mb-3 animate-spin"></i>
+                    <p class="text-lg">Loading anomalies...</p>
+                </div>
+
+                <div x-show="!loading" class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-white/10">
+                                <th class="text-left text-white/70 font-semibold py-3 px-4">ID</th>
+                                <th class="text-left text-white/70 font-semibold py-3 px-4">Message</th>
+                                <th class="text-left text-white/70 font-semibold py-3 px-4">Confidence</th>
+                                <th class="text-left text-white/70 font-semibold py-3 px-4">Severity</th>
+                                <th class="text-left text-white/70 font-semibold py-3 px-4">Source Host</th>
+                                <th class="text-left text-white/70 font-semibold py-3 px-4">Timestamp</th>
+                                <th class="text-left text-white/70 font-semibold py-3 px-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="anomaly in sortedAnomalies" :key="anomaly.id">
+                                <tr class="border-b border-white/10 hover:bg-white/5 transition cursor-pointer"
+                                    @click="selectAnomaly(anomaly)">
+                                    <td class="py-3 px-4">
+                                        <span class="font-mono text-cyan-400" x-text="anomaly.id"></span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <p class="text-white/90 truncate max-w-md" x-text="anomaly.raw_log_message"></p>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="px-2 py-1 text-xs rounded font-semibold"
+                                                :class="getConfidenceColor(anomaly.confidence || anomaly.analysis_result?.confidence)"
+                                                x-text="((anomaly.confidence || anomaly.analysis_result?.confidence) * 100).toFixed(1) + '%'">
+                                            </span>
+                                            <div class="w-16 bg-white/10 rounded-full h-1.5">
+                                                <div class="h-1.5 rounded-full"
+                                                    :class="getConfidenceBarColor(anomaly.confidence || anomaly.analysis_result?.confidence)"
+                                                    :style="`width: ${((anomaly.confidence || anomaly.analysis_result?.confidence) || 0) * 100}%`">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="px-2 py-1 text-xs rounded border"
+                                            :class="getSeverityColor(anomaly.severity)"
+                                            x-text="anomaly.severity"></span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="text-white/70" x-text="anomaly.source_host"></span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="text-white/50 text-sm"
+                                            x-text="formatTime(anomaly.event_timestamp)"></span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <button @click.stop="selectAnomaly(anomaly)"
+                                            class="px-3 py-1 bg-cyan-500 hover:bg-cyan-600 rounded text-sm transition">
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+
+                    <div x-show="sortedAnomalies.length === 0 && !loading" class="text-center text-white/50 py-12">
+                        <i class="ph ph-check-circle text-5xl mb-3 text-green-400"></i>
+                        <p class="text-lg">No anomalies detected in the selected time range</p>
+                        <p class="text-sm mt-2">Try adjusting the time range or filters</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white/5 backdrop-blur-lg rounded-xl shadow-xl p-6 border border-white/10">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold flex items-center">
+                        <i class="ph ph-chart-bar-horizontal text-red-400 mr-2"></i>
+                        Anomaly Template Distribution
+                        <span class="text-sm text-white/50 ml-3" x-text="`(Last ${timeRangeLabel})`"></span>
+                    </h3>
+
+                    <!-- Filter & Sort Controls -->
+                    <div class="flex items-center space-x-2">
+                        <select x-model="chartFilter" @change="renderTemplateChart()"
+                            class="px-3 py-1 bg-white/10 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                            <option value="all">All Severities</option>
+                            <option value="CRITICAL">Critical</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                            <option value="INFO">Info</option>
+                        </select>
+
+                        <select x-model="chartTopN" @change="renderTemplateChart()"
+                            class="px-3 py-1 bg-white/10 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                            <option value="10">Top 10</option>
+                            <option value="15">Top 15</option>
+                            <option value="20">Top 20</option>
+                            <option value="40">Top 40</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div x-show="!loading && anomalies.length > 0" class="h-[600px]">
+                    <canvas x-ref="templateChart"></canvas>
+                </div>
+
+                <div x-show="anomalies.length === 0 && !loading" class="text-center text-white/50 py-12">
+                    <i class="ph ph-chart-bar text-4xl mb-2"></i>
+                    <p>No anomaly data to display</p>
+                </div>
+
+                <!-- Legend -->
+                <div x-show="!loading && anomalies.length > 0"
+                    class="flex items-center justify-center space-x-6 mt-4 pt-4 border-t border-white/10">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 rounded" style="background-color: #dc2626;"></div>
+                        <span class="text-sm text-white/70">CRITICAL</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 rounded" style="background-color: #ea580c;"></div>
+                        <span class="text-sm text-white/70">HIGH</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 rounded" style="background-color: #ca8a04;"></div>
+                        <span class="text-sm text-white/70">MEDIUM</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 rounded" style="background-color: #2563eb;"></div>
+                        <span class="text-sm text-white/70">LOW</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 rounded" style="background-color: #6b7280;"></div>
+                        <span class="text-sm text-white/70">INFO</span>
+                    </div>
+                    <div class="flex items-center space-x-4 ml-8 text-xs text-white/50">
+                        <span>Color = dominant severity of template</span>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+                x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0"
+                x-transition:leave-end="translate-x-full"
+                class="fixed right-0 top-0 h-full w-full md:w-2/3 lg:w-1/2 bg-slate-900 shadow-2xl z-50 overflow-y-auto"
+                @click.away="closeSidebar()">
+
+                <div class="p-6 space-y-6">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                        <h2 class="text-2xl font-bold text-red-400">
+                            <i class="ph ph-warning-diamond mr-2"></i>Anomaly Details
+                        </h2>
+                        <button @click="closeSidebar()" class="text-white/70 hover:text-white transition">
+                            <i class="ph ph-x text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <template x-if="selectedAnomaly">
+                        <div class="space-y-6">
+                            <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">Basic
+                                    Information</h3>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-white/50">Anomaly ID:</span>
+                                        <span class="text-white font-mono" x-text="selectedAnomaly.id"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-white/50">Created At:</span>
+                                        <span class="text-white" x-text="formatTime(selectedAnomaly.created_at)"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-white/50">Event Timestamp:</span>
+                                        <span class="text-white"
+                                            x-text="formatTime(selectedAnomaly.event_timestamp)"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">Anomaly
+                                    Information</h3>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Confidence Score:</span>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="px-3 py-1 text-sm rounded border font-semibold"
+                                                :class="getConfidenceColor(selectedAnomaly.confidence || selectedAnomaly.analysis_result?.confidence)">
+                                                <span
+                                                    x-text="((selectedAnomaly.confidence || selectedAnomaly.analysis_result?.confidence) * 100).toFixed(1) + '%'"></span>
+                                            </span>
+                                            <div class="w-32 bg-white/10 rounded-full h-3">
+                                                <div class="h-3 rounded-full transition-all duration-500"
+                                                    :class="getConfidenceBarColor(selectedAnomaly.confidence || selectedAnomaly.analysis_result?.confidence)"
+                                                    :style="`width: ${((selectedAnomaly.confidence || selectedAnomaly.analysis_result?.confidence) || 0) * 100}%`">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Severity:</span>
+                                        <span class="px-3 py-1 text-sm rounded border"
+                                            :class="getSeverityColor(selectedAnomaly.severity)"
+                                            x-text="selectedAnomaly.severity"></span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Source Host:</span>
+                                        <span
+                                            class="px-3 py-1 bg-purple-500/20 text-purple-300 text-sm rounded border border-purple-400"
+                                            x-text="selectedAnomaly.source_host"></span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-white/50">Log Type:</span>
+                                        <span
+                                            class="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded border border-blue-400"
+                                            x-text="selectedAnomaly.log_type"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">Raw Log
+                                    Message</h3>
+                                <p class="text-white bg-black/30 p-3 rounded font-mono text-sm break-words"
+                                    x-text="selectedAnomaly.raw_log_message"></p>
+                            </div>
+
+                            <template x-if="selectedAnomaly.analysis_result">
+                                <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                    <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">
+                                        Analysis Result</h3>
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-start">
+                                            <span class="text-white/50">Event Type:</span>
+                                            <span class="px-3 py-1 text-sm rounded border"
+                                                :class="getEventTypeColor(selectedAnomaly.analysis_result.event_type)"
+                                                x-text="selectedAnomaly.analysis_result.event_type || 'N/A'"></span>
+                                        </div>
+                                        <div>
+                                            <span class="text-white/50 block mb-2">Description:</span>
+                                            <p class="text-white bg-black/30 p-3 rounded text-sm"
+                                                x-text="selectedAnomaly.analysis_result.description || 'No description available'">
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                                <h3 class="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">Full JSON
+                                    Data</h3>
+                                <pre
+                                    class="bg-black/30 p-3 rounded text-xs text-green-300 font-mono overflow-x-auto max-h-64 overflow-y-auto"><code x-text="JSON.stringify(selectedAnomaly, null, 2)"></code></pre>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Overlay -->
+            <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0" @click="closeSidebar()" class="fixed inset-0 bg-black/50 z-40"></div>
+        </section>
     </main>
 
     <footer
@@ -702,6 +1119,26 @@
                             }
                         };
                     });
+                },
+
+                getConfidenceColor(confidence) {
+                    if (!confidence) return 'bg-gray-500/20 text-gray-300 border-gray-400';
+
+                    const conf = confidence * 100;
+                    if (conf >= 90) return 'bg-green-500/20 text-green-300 border-green-400';
+                    if (conf >= 75) return 'bg-blue-500/20 text-blue-300 border-blue-400';
+                    if (conf >= 50) return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
+                    return 'bg-orange-500/20 text-orange-300 border-orange-400';
+                },
+
+                getConfidenceBarColor(confidence) {
+                    if (!confidence) return 'bg-gray-500';
+
+                    const conf = confidence * 100;
+                    if (conf >= 90) return 'bg-green-500';
+                    if (conf >= 75) return 'bg-blue-500';
+                    if (conf >= 50) return 'bg-yellow-500';
+                    return 'bg-orange-500';
                 },
 
                 async fetchLogs() {
@@ -962,6 +1399,596 @@
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
+                }
+            }));
+
+            Alpine.data('templateAnalyticsComponent', () => ({
+                templates: [],
+                totalTemplates: 0,
+                hours: 24,
+                loading: false,
+                templateChart: null,
+
+                init() {
+                    this.fetchTemplates();
+
+                    this.$watch('hours', () => {
+                        this.fetchTemplates();
+                    });
+
+                    // Auto-refresh every 60 seconds
+                    setInterval(() => {
+                        if (window.currentTab === 'template-analytics') {
+                            this.fetchTemplates();
+                        }
+                    }, 60000);
+                },
+
+                async fetchTemplates() {
+                    this.loading = true;
+                    try {
+                        const url = `${window.apiBaseUrl}/analyze/templates`;
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                hours: this.hours,
+                                x_api_key: '-'
+                            })
+                        });
+
+                        const data = await res.json();
+                        this.totalTemplates = data.total_templates || 0;
+                        this.templates = data.templates || [];
+
+                        await this.$nextTick();
+                        this.renderChart();
+                    } catch (e) {
+                        console.error("Failed to fetch templates:", e);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                renderChart() {
+                    const ctx = this.$refs.templateChart;
+
+                    if (!ctx || !ctx.getContext) {
+                        console.log('Template chart canvas not ready yet');
+                        return;
+                    }
+
+                    try {
+                        if (this.templateChart) {
+                            this.templateChart.destroy();
+                        }
+
+                        if (this.templates.length === 0) {
+                            return;
+                        }
+
+                        const labels = this.templates.map(t => this.truncateTemplate(t.template));
+                        const counts = this.templates.map(t => t.count);
+                        const percentages = this.templates.map(t => t.percentage);
+
+                        const colors = this.templates.map(t => this.getTemplateColor(t.severity_distribution));
+
+                        this.templateChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Log Count',
+                                    data: counts,
+                                    backgroundColor: colors,
+                                    borderColor: colors.map(c => c.replace('0.6', '1')),
+                                    borderWidth: 2,
+                                    borderRadius: 6,
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                indexAxis: 'y', // Horizontal bar chart
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                        padding: 16,
+                                        titleColor: '#fff',
+                                        bodyColor: '#fff',
+                                        borderColor: '#22d3ee',
+                                        borderWidth: 2,
+                                        displayColors: false,
+                                        callbacks: {
+                                            title: (context) => {
+                                                const index = context[0].dataIndex;
+                                                return this.templates[index].template;
+                                            },
+                                            label: (context) => {
+                                                const index = context.dataIndex;
+                                                const template = this.templates[index];
+                                                return [
+                                                    `Count: ${template.count}`,
+                                                    `Percentage: ${template.percentage.toFixed(2)}%`,
+                                                    '',
+                                                    'Severity Distribution:',
+                                                    ...Object.entries(template.severity_distribution).map(
+                                                        ([sev, count]) => `  ${sev}: ${count}`
+                                                    )
+                                                ];
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        beginAtZero: true,
+                                        grid: {
+                                            color: 'rgba(255, 255, 255, 0.1)'
+                                        },
+                                        ticks: {
+                                            color: '#fff'
+                                        },
+                                        title: {
+                                            display: true,
+                                            text: 'Count',
+                                            color: '#fff'
+                                        }
+                                    },
+                                    y: {
+                                        grid: {
+                                            display: false
+                                        },
+                                        ticks: {
+                                            color: '#fff',
+                                            font: {
+                                                size: 11
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error rendering template chart:', e);
+                    }
+                },
+
+                getTemplateColor(severityDistribution) {
+                    let maxSeverity = 'INFO';
+                    let maxCount = 0;
+
+                    for (const [severity, count] of Object.entries(severityDistribution)) {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            maxSeverity = severity;
+                        }
+                    }
+
+                    const colors = {
+                        'CRITICAL': 'rgba(220, 38, 38, 0.6)',
+                        'HIGH': 'rgba(234, 88, 12, 0.6)',
+                        'MEDIUM': 'rgba(202, 138, 4, 0.6)',
+                        'LOW': 'rgba(37, 99, 235, 0.6)',
+                        'INFO': 'rgba(8, 145, 178, 0.6)'
+                    };
+
+                    return colors[maxSeverity] || colors['INFO'];
+                },
+
+                truncateTemplate(template, maxLength = 50) {
+                    if (template.length <= maxLength) return template;
+                    return template.substring(0, maxLength - 3) + '...';
+                },
+
+                get timeRangeLabel() {
+                    if (this.hours == 24) return '24 hours';
+                    if (this.hours == 168) return '7 days';
+                    if (this.hours == 720) return '30 days';
+                    if (this.hours == 8760) return '1 year';
+                    if (this.hours < 24) return `${this.hours} hours`;
+                    if (this.hours < 168) return `${Math.round(this.hours / 24)} days`;
+                    if (this.hours < 720) return `${Math.round(this.hours / 168)} weeks`;
+                    return `${Math.round(this.hours / 720)} months`;
+                },
+
+                get totalLogs() {
+                    return this.templates.reduce((sum, t) => sum + t.count, 0);
+                },
+
+                get mostCommonTemplate() {
+                    if (this.templates.length === 0) return 'N/A';
+                    return this.truncateTemplate(this.templates[0].template, 40);
+                },
+
+                get mostCommonPercentage() {
+                    if (this.templates.length === 0) return 0;
+                    return this.templates[0].percentage.toFixed(2);
+                }
+            }));
+
+            Alpine.data('anomalyAnalyticsComponent', () => ({
+                anomalies: [],
+                sortedAnomalies: [],
+                templates: [],
+                selectedAnomaly: null,
+                sidebarOpen: false,
+                timeRange: 24,
+                sortBy: 'confidence',
+                sortOrder: 'desc',
+                loading: false,
+                lastUpdate: 'never',
+                templateChart: null,
+                chartFilter: 'all',
+                chartTopN: 15,
+
+                init() {
+                    this.fetchAnomalies();
+                    this.fetchTemplates();
+
+                    this.$watch('timeRange', () => {
+                        this.fetchAnomalies();
+                        this.fetchTemplates();
+                    });
+
+                    setInterval(() => {
+                        if (window.currentTab === 'anomaly-analytics') {
+                            this.fetchAnomalies();
+                            this.fetchTemplates();
+                        }
+                    }, 300000);
+                },
+
+                async fetchAnomalies() {
+                    this.loading = true;
+                    try {
+                        const url = `${window.apiBaseUrl}/incidents?hours=${this.timeRange}&limit=100&offset=0&x_api_key=-`;
+                        const res = await fetch(url);
+                        const data = await res.json();
+
+                        this.anomalies = (data.incidents || []).filter(incident => {
+                            return incident.is_anomaly === true ||
+                                incident.analysis_result?.is_anomaly === true;
+                        });
+
+                        this.sortAnomalies();
+                        this.lastUpdate = new Date().toLocaleTimeString();
+                    } catch (e) {
+                        console.error("Failed to fetch anomalies:", e);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async fetchTemplates() {
+                    try {
+                        const url = `${window.apiBaseUrl}/analyze/templates`;
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                hours: this.timeRange,
+                                x_api_key: '-'
+                            })
+                        });
+
+                        const data = await res.json();
+                        this.templates = data.templates || [];
+
+                        await this.$nextTick();
+                        if (window.currentTab === 'anomaly-analytics') {
+                            setTimeout(() => {
+                                this.renderTemplateChart();
+                            }, 100);
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch templates:", e);
+                    }
+                },
+
+                renderTemplateChart() {
+                    const ctx = this.$refs.templateChart;
+
+                    if (!ctx || !ctx.getContext) {
+                        console.log('Template chart canvas not ready');
+                        return;
+                    }
+
+                    if (this.templates.length === 0) {
+                        console.log('No templates to render');
+                        return;
+                    }
+
+                    try {
+                        if (this.templateChart) {
+                            this.templateChart.destroy();
+                            this.templateChart = null;
+                        }
+
+                        let filteredTemplates = [...this.templates];
+
+                        if (this.chartFilter !== 'all') {
+                            filteredTemplates = filteredTemplates.filter(t =>
+                                t.severity_distribution && t.severity_distribution[this.chartFilter] > 0
+                            );
+                        }
+
+                        filteredTemplates = filteredTemplates.slice(0, parseInt(this.chartTopN));
+
+                        if (filteredTemplates.length === 0) {
+                            console.log('No templates after filtering');
+                            return;
+                        }
+
+                        const labels = filteredTemplates.map(t => this.truncateTemplate(t.template, 60));
+                        const counts = filteredTemplates.map(t => t.count);
+                        const colors = filteredTemplates.map(t => this.getTemplateDominantColor(t.severity_distribution));
+
+                        this.templateChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Log Count',
+                                    data: counts,
+                                    backgroundColor: colors,
+                                    borderColor: colors.map(c => c.replace('0.8', '1')),
+                                    borderWidth: 2,
+                                    borderRadius: 6,
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                indexAxis: 'y',
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                        padding: 16,
+                                        titleColor: '#fff',
+                                        bodyColor: '#fff',
+                                        borderColor: '#22d3ee',
+                                        borderWidth: 2,
+                                        displayColors: false,
+                                        callbacks: {
+                                            title: (context) => {
+                                                const index = context[0].dataIndex;
+                                                return filteredTemplates[index].template;
+                                            },
+                                            label: (context) => {
+                                                const index = context.dataIndex;
+                                                const template = filteredTemplates[index];
+
+                                                return [
+                                                    `Count: ${template.count}`,
+                                                    `Percentage: ${template.percentage.toFixed(2)}%`,
+                                                    '',
+                                                    'Severity Distribution:',
+                                                    ...Object.entries(template.severity_distribution || {})
+                                                        .sort(([, a], [, b]) => b - a)
+                                                        .map(([sev, count]) => `  ${sev}: ${count}`)
+                                                ];
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        beginAtZero: true,
+                                        grid: {
+                                            color: 'rgba(255, 255, 255, 0.1)'
+                                        },
+                                        ticks: {
+                                            color: '#fff',
+                                            font: { size: 11 }
+                                        },
+                                        title: {
+                                            display: true,
+                                            text: 'Number of Logs',
+                                            color: '#fff',
+                                            font: { size: 12 }
+                                        }
+                                    },
+                                    y: {
+                                        grid: { display: false },
+                                        ticks: {
+                                            color: '#fff',
+                                            font: { size: 10 },
+                                            autoSkip: false
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                        console.log('Template chart rendered successfully with', filteredTemplates.length, 'templates');
+                    } catch (e) {
+                        console.error('Error rendering template chart:', e);
+                        if (this.templateChart) {
+                            try {
+                                this.templateChart.destroy();
+                            } catch (destroyError) {
+                                console.warn('Error destroying chart:', destroyError);
+                            }
+                            this.templateChart = null;
+                        }
+                    }
+                },
+
+                getTemplateDominantColor(severityDistribution) {
+                    if (!severityDistribution) return 'rgba(107, 114, 128, 0.8)'; // INFO color
+
+                    // Find the severity with the highest count
+                    let maxCount = 0;
+                    let dominantSeverity = 'INFO';
+
+                    const severityPriority = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
+
+                    for (const severity of severityPriority) {
+                        const count = severityDistribution[severity] || 0;
+                        if (count > maxCount) {
+                            maxCount = count;
+                            dominantSeverity = severity;
+                        }
+                    }
+
+                    const colors = {
+                        'CRITICAL': 'rgba(220, 38, 38, 0.8)',
+                        'HIGH': 'rgba(234, 88, 12, 0.8)',
+                        'MEDIUM': 'rgba(202, 138, 4, 0.8)',
+                        'LOW': 'rgba(37, 99, 235, 0.8)',
+                        'INFO': 'rgba(107, 114, 128, 0.8)'
+                    };
+
+                    return colors[dominantSeverity] || colors['INFO'];
+                },
+
+                truncateTemplate(template, maxLength = 60) {
+                    if (!template) return 'Unknown';
+                    if (template.length <= maxLength) return template;
+                    return template.substring(0, maxLength - 3) + '...';
+                },
+
+                sortAnomalies() {
+                    let sorted = [...this.anomalies];
+
+                    if (this.sortBy === 'confidence') {
+                        sorted.sort((a, b) => {
+                            const confA = a.confidence || a.analysis_result?.confidence || 0;
+                            const confB = b.confidence || b.analysis_result?.confidence || 0;
+                            return this.sortOrder === 'desc' ? confB - confA : confA - confB;
+                        });
+                    } else if (this.sortBy === 'time') {
+                        sorted.sort((a, b) => {
+                            const timeA = new Date(a.event_timestamp || a.created_at);
+                            const timeB = new Date(b.event_timestamp || b.created_at);
+                            return this.sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+                        });
+                    } else if (this.sortBy === 'severity') {
+                        const severityOrder = { 'CRITICAL': 5, 'HIGH': 4, 'MEDIUM': 3, 'LOW': 2, 'INFO': 1 };
+                        sorted.sort((a, b) => {
+                            const sevA = severityOrder[a.severity] || 0;
+                            const sevB = severityOrder[b.severity] || 0;
+                            return this.sortOrder === 'desc' ? sevB - sevA : sevA - sevB;
+                        });
+                    }
+
+                    this.sortedAnomalies = sorted;
+                },
+
+                toggleSortOrder() {
+                    this.sortOrder = this.sortOrder === 'desc' ? 'asc' : 'desc';
+                    this.sortAnomalies();
+                },
+
+                selectAnomaly(anomaly) {
+                    this.selectedAnomaly = anomaly;
+                    this.sidebarOpen = true;
+                },
+
+                closeSidebar() {
+                    this.sidebarOpen = false;
+                    setTimeout(() => {
+                        this.selectedAnomaly = null;
+                    }, 300);
+                },
+
+                get timeRangeLabel() {
+                    if (this.timeRange == 24) return '24 hours';
+                    if (this.timeRange == 168) return '7 days';
+                    if (this.timeRange == 720) return '30 days';
+                    if (this.timeRange == 8760) return '1 year';
+                    if (this.timeRange < 24) return `${this.timeRange} hours`;
+                    if (this.timeRange < 168) return `${Math.round(this.timeRange / 24)} days`;
+                    if (this.timeRange < 720) return `${Math.round(this.timeRange / 168)} weeks`;
+                    return `${Math.round(this.timeRange / 720)} months`;
+                },
+
+                get averageConfidence() {
+                    if (this.anomalies.length === 0) return 0;
+                    const sum = this.anomalies.reduce((acc, a) => {
+                        const conf = a.confidence || a.analysis_result?.confidence || 0;
+                        return acc + conf;
+                    }, 0);
+                    return ((sum / this.anomalies.length) * 100).toFixed(1);
+                },
+
+                get highConfidenceCount() {
+                    return this.anomalies.filter(a => {
+                        const conf = a.confidence || a.analysis_result?.confidence || 0;
+                        return conf >= 0.8;
+                    }).length;
+                },
+
+                get criticalAnomaliesCount() {
+                    return this.anomalies.filter(a => a.severity === 'CRITICAL').length;
+                },
+
+                getConfidenceColor(confidence) {
+                    if (!confidence) return 'bg-gray-500/20 text-gray-300 border-gray-400';
+
+                    const conf = confidence * 100;
+                    if (conf >= 90) return 'bg-green-500/20 text-green-300 border-green-400';
+                    if (conf >= 75) return 'bg-blue-500/20 text-blue-300 border-blue-400';
+                    if (conf >= 50) return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
+                    return 'bg-orange-500/20 text-orange-300 border-orange-400';
+                },
+
+                getConfidenceBarColor(confidence) {
+                    if (!confidence) return 'bg-gray-500';
+
+                    const conf = confidence * 100;
+                    if (conf >= 90) return 'bg-green-500';
+                    if (conf >= 75) return 'bg-blue-500';
+                    if (conf >= 50) return 'bg-yellow-500';
+                    return 'bg-orange-500';
+                },
+
+                getSeverityColor(severity) {
+                    switch ((severity || '').toLowerCase()) {
+                        case 'critical':
+                            return 'bg-red-500/20 text-red-300 border-red-400';
+                        case 'high':
+                            return 'bg-orange-500/20 text-orange-300 border-orange-400';
+                        case 'medium':
+                            return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
+                        case 'low':
+                            return 'bg-blue-500/20 text-blue-300 border-blue-400';
+                        case 'info':
+                            return 'bg-cyan-500/20 text-cyan-300 border-cyan-400';
+                        default:
+                            return 'bg-gray-500/20 text-gray-300 border-gray-400';
+                    }
+                },
+
+                getEventTypeColor(eventType) {
+                    switch ((eventType || '').toLowerCase()) {
+                        case 'normal':
+                            return 'bg-green-500/20 text-green-300 border-green-400';
+                        case 'system_error':
+                        case 'error':
+                            return 'bg-red-500/20 text-red-300 border-red-400';
+                        case 'warning':
+                            return 'bg-yellow-500/20 text-yellow-300 border-yellow-400';
+                        case 'anomaly':
+                            return 'bg-purple-500/20 text-purple-300 border-purple-400';
+                        default:
+                            return 'bg-blue-500/20 text-blue-300 border-blue-400';
+                    }
+                },
+
+                formatTime(timestamp) {
+                    if (!timestamp) return '';
+                    const date = new Date(timestamp);
+                    return date.toLocaleString();
                 }
             }));
 
