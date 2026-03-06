@@ -38,7 +38,8 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
 # Εγκατάσταση των npm εξαρτήσεων
-RUN npm install && npm run build
+RUN npm ci --prefer-offline || npm install
+RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 RUN composer install --no-dev --optimize-autoloader
 # Αντιγραφή .env και δημιουργία κλειδιού Laravel
